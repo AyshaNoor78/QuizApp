@@ -1,0 +1,353 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum Operator {
+  ROBI
+  AIRTEL
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+  PENDING
+  CANCELLED
+  BILLING_FAILED
+}
+
+enum AnswerOption {
+  A
+  B
+  C
+  D
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum QuizSessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum OtpPurpose {
+  SUBSCRIPTION
+}
+
+enum SmsType {
+  DAILY_SCORE
+  SUBSCRIPTION_CONFIRM
+  SUBSCRIPTION_STATUS
+  OTP
+}
+
+enum SmsStatus {
+  QUEUED
+  SENT
+  FAILED
+  DELIVERED
+}
+
+enum TransactionType {
+  NEW
+  RENEWAL
+  CANCELLATION
+  BILLING_SUCCESS
+  BILLING_FAILURE
+}
+
+// ============================================
+// USER & AUTH
+// ============================================
+
+model User {
+  id            String   @id @default(uuid())
+  mobileNumber  String   @unique @map("mobile_number")
+  passwordHash  String   @map("password_hash")
+  name          String
+  operator      Operator
+  role          UserRole @default(USER)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  subscriptions         Subscription[]
+  quizSessions          QuizSession[]
+  dailyScores           DailyScore[]
+  smsLogs               SmsLog[]
+  refreshTokens         RefreshToken[]
+  otpVerifications      OtpVerification[]
+  subscriptionTransactions SubscriptionTransaction[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tokenHash String   @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  isRevoked Boolean  @default(false) @map("is_revoked")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("refresh_tokens")
+}
+
+// ============================================
+// SUBSCRIPTION & OTP
+// ============================================
+
+model Subscription {
+  id                  String             @id @default(uuid())
+  userId              String             @map("user_id")
+  operator            Operator
+  status              SubscriptionStatus @default(PENDING)
+  subscriptionStart   DateTime?          @map("subscription_start")
+  subscriptionExpiry  DateTime?          @map("subscription_expiry")
+  bdappsSubscriptionId String?           @map("bdapps_subscription_id")
+  lastBillingDate     DateTime?          @map("last_billing_date")
+  productId           String?            @map("product_id")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  user         User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions SubscriptionTransaction[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([bdappsSubscriptionId])
+  @@map("subscriptions")
+}
+
+model OtpVerification {
+  id           String     @id @default(uuid())
+  userId       String     @map("user_id")
+  mobileNumber String     @map("mobile_number")
+  otpHash      String     @map("otp_hash")
+  purpose      OtpPurpose @default(SUBSCRIPTION)
+  expiresAt    DateTime   @map("expires_at")
+  isUsed       Boolean    @default(false) @map("is_used")
+  attempts     Int        @default(0)
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([mobileNumber])
+  @@map("otp_verifications")
+}
+
+model SubscriptionTransaction {
+  id                   String          @id @default(uuid())
+  subscriptionId       String?         @map("subscription_id")
+  userId               String          @map("user_id")
+  type                 TransactionType
+  amount               Float?
+  bdappsTransactionId  String?         @map("bdapps_transaction_id")
+  rawPayload           Json?           @map("raw_payload")
+  createdAt            DateTime        @default(now()) @map("created_at")
+
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([userId])
+  @@map("subscription_transactions")
+}
+
+// ============================================
+// QUIZ CONTENT (Subject → Chapter → Section → Question)
+// ============================================
+
+model Subject {
+  id            String   @id @default(uuid())
+  nameEn        String   @map("name_en")
+  nameBn        String?  @map("name_bn")
+  descriptionEn String?  @map("description_en")
+  descriptionBn String?  @map("description_bn")
+  icon          String?
+  color         String?
+  order         Int      @default(0)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  chapters Chapter[]
+
+  @@map("subjects")
+}
+
+model Chapter {
+  id        String   @id @default(uuid())
+  subjectId String   @map("subject_id")
+  nameEn    String   @map("name_en")
+  nameBn    String?  @map("name_bn")
+  order     Int      @default(0)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  subject  Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  sections Section[]
+
+  @@index([subjectId])
+  @@map("chapters")
+}
+
+model Section {
+  id        String   @id @default(uuid())
+  chapterId String   @map("chapter_id")
+  nameEn    String   @map("name_en")
+  nameBn    String?  @map("name_bn")
+  order     Int      @default(0)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  chapter   Chapter      @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  questions Question[]
+  sessions  QuizSession[]
+
+  @@index([chapterId])
+  @@map("sections")
+}
+
+model Question {
+  id             String      @id @default(uuid())
+  sectionId      String      @map("section_id")
+  questionTextEn String      @map("question_text_en")
+  questionTextBn String?     @map("question_text_bn")
+  optionAEn      String      @map("option_a_en")
+  optionABn      String?     @map("option_a_bn")
+  optionBEn      String      @map("option_b_en")
+  optionBBn      String?     @map("option_b_bn")
+  optionCEn      String      @map("option_c_en")
+  optionCBn      String?     @map("option_c_bn")
+  optionDEn      String      @map("option_d_en")
+  optionDBn      String?     @map("option_d_bn")
+  correctAnswer  AnswerOption @map("correct_answer")
+  explanationEn  String?     @map("explanation_en")
+  explanationBn  String?     @map("explanation_bn")
+  difficulty     Difficulty   @default(MEDIUM)
+  marks          Int          @default(1)
+  isActive       Boolean      @default(true) @map("is_active")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  section     Section      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  quizAnswers QuizAnswer[]
+
+  @@index([sectionId])
+  @@index([difficulty])
+  @@map("questions")
+}
+
+// ============================================
+// QUIZ SESSIONS & ANSWERS
+// ============================================
+
+model QuizSession {
+  id          String            @id @default(uuid())
+  userId      String            @map("user_id")
+  sectionId   String            @map("section_id")
+  status      QuizSessionStatus @default(IN_PROGRESS)
+  startedAt   DateTime          @default(now()) @map("started_at")
+  completedAt DateTime?         @map("completed_at")
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  section Section      @relation(fields: [sectionId], references: [id])
+  answers QuizAnswer[]
+
+  @@index([userId])
+  @@index([sectionId])
+  @@map("quiz_sessions")
+}
+
+model QuizAnswer {
+  id             String       @id @default(uuid())
+  quizSessionId  String       @map("quiz_session_id")
+  questionId     String       @map("question_id")
+  selectedAnswer AnswerOption @map("selected_answer")
+  isCorrect      Boolean      @map("is_correct")
+  answeredAt     DateTime     @default(now()) @map("answered_at")
+
+  quizSession QuizSession @relation(fields: [quizSessionId], references: [id], onDelete: Cascade)
+  question    Question    @relation(fields: [questionId], references: [id])
+
+  @@unique([quizSessionId, questionId])
+  @@index([quizSessionId])
+  @@map("quiz_answers")
+}
+
+// ============================================
+// DAILY SCORES
+// ============================================
+
+model DailyScore {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  date             DateTime @db.Date
+  totalQuestions   Int      @default(0) @map("total_questions")
+  correctAnswers   Int      @default(0) @map("correct_answers")
+  incorrectAnswers Int      @default(0) @map("incorrect_answers")
+  totalMarks       Int      @default(0) @map("total_marks")
+  percentage       Float    @default(0)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@map("daily_scores")
+}
+
+// ============================================
+// SMS LOGS
+// ============================================
+
+model SmsLog {
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  type              SmsType
+  message           String
+  status            SmsStatus @default(QUEUED)
+  providerMessageId String?   @map("provider_message_id")
+  errorMessage      String?   @map("error_message")
+  retryCount        Int       @default(0) @map("retry_count")
+  nextRetryAt       DateTime? @map("next_retry_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("sms_logs")
+}

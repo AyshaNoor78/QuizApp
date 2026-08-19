@@ -1,0 +1,71 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Success",
+    "home": "Home",
+    "browse": "Browse",
+    "profile": "Profile",
+    "cancel": "Cancel",
+    "save": "Save",
+    "next": "Next",
+    "submit": "Submit"
+  },
+  "auth": {
+    "login": "Log In",
+    "register": "Register",
+    "logout": "Log Out",
+    "mobile": "Mobile Number",
+    "password": "Password",
+    "name": "Full Name",
+    "operator": "Mobile Operator",
+    "operatorNotice": "Only Robi and Airtel users can register",
+    "confirmPassword": "Confirm Password",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "mobileRequired": "Mobile number is required",
+    "passwordRequired": "Password is required"
+  },
+  "quiz": {
+    "subjects": "Subjects",
+    "chapters": "Chapters",
+    "sections": "Sections",
+    "start": "Start Quiz",
+    "question": "Question",
+    "of": "of",
+    "correct": "Correct!",
+    "incorrect": "Incorrect",
+    "explanation": "Explanation",
+    "result": "Quiz Result",
+    "score": "Score",
+    "review": "Review Answers",
+    "tryAgain": "Try Again",
+    "nextSection": "Next Section",
+    "freeCompleted": "You've completed your free questions for this section."
+  },
+  "subscription": {
+    "premiumActive": "✓ Premium Active",
+    "freeTier": "FREE • 3 questions per section",
+    "upgradePrompt": "Unlock the full quiz with a ৳5/day subscription.",
+    "pricingNotice": "Subscription charge: ৳5 daily, including VAT and applicable charges.",
+    "subscribe": "Subscribe Now",
+    "step1": "Enter Number",
+    "step2": "Verify OTP",
+    "step3": "Subscribed",
+    "sendOtp": "Send OTP",
+    "verifyOtp": "Verify OTP",
+    "resendOtp": "Resend OTP",
+    "enterOtp": "Enter the 6-digit OTP sent to your number",
+    "successMessage": "Subscription activated successfully!"
+  },
+  "admin": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "questions": "Questions",
+    "import": "Import Questions",
+    "totalUsers": "Total Users",
+    "activeSubscribers": "Active Subscribers",
+    "totalQuestions": "Total Questions",
+    "smsSent": "SMS Sent Today"
+  }
+}
